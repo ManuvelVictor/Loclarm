@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">#E68369</item>
+        <item name="colorPrimaryVariant">#131842</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">#ECCEAE</item>
+        <item name="colorSecondaryVariant">#ECCEAE</item>
+        <item name="colorOnSecondary">#131842</item>
+    </style>
+
+    <style name="AutocompleteTheme" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">#131842</item>
+        <item name="boxBackgroundColor">#ECCEAE</item>
+        <item name="hintTextColor">#5A72A0</item>
+        <item name="android:textColor">#131842</item>
+    </style>
+</resources>
