@@ -18,8 +18,15 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
+import com.victor.loclarm.DismissAlarmReceiver
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
+import com.victor.loclarm.db.Alarm
+import com.victor.loclarm.db.AlarmDao
+import com.victor.loclarm.db.AppDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class LocationService : Service() {
 
@@ -35,9 +42,12 @@ class LocationService : Service() {
         const val CHANNEL_ID = "LocationServiceChannel"
     }
 
+    private lateinit var alarmDao: AlarmDao
+
     override fun onCreate() {
         super.onCreate()
-        Log.d("LocationService", "Service created")
+        val db = AppDatabase.getDatabase(this)
+        alarmDao = db.alarmDao()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
@@ -48,6 +58,34 @@ class LocationService : Service() {
         }
         startLocationUpdates()
     }
+
+    private fun triggerAlarm() {
+        if (mediaPlayer == null) {
+            mediaPlayer = MediaPlayer.create(this, R.raw.retro_game)
+            mediaPlayer?.isLooping = true
+            mediaPlayer?.start()
+            showEnterRadiusNotification()
+        }
+    }
+
+    private fun showEnterRadiusNotification() {
+        Log.d("LocationService", "Showing notification")
+        val dismissIntent = Intent(this, DismissAlarmReceiver::class.java).apply {
+            action = "DISMISS_ALARM"
+        }
+        val dismissPendingIntent = PendingIntent.getBroadcast(this, 0, dismissIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Enter Radius Alert")
+            .setContentText("You have entered the specified radius")
+            .setSmallIcon(R.drawable.target_icon)
+            .addAction(R.drawable.close_icon, "Dismiss", dismissPendingIntent)
+            .build()
+
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(2, notification)
+    }
+
 
     private fun startLocationUpdates() {
         val locationRequest = LocationRequest.Builder(
@@ -91,17 +129,8 @@ class LocationService : Service() {
         }
     }
 
-    private fun triggerAlarm() {
-        Log.d("LocationService", "Triggering alarm")
-        if (mediaPlayer == null) {
-            mediaPlayer = MediaPlayer.create(this, R.raw.retro_game)
-            mediaPlayer?.isLooping = true
-            mediaPlayer?.start()
-        }
-    }
 
     private fun stopAlarm() {
-        Log.d("LocationService", "Stopping alarm")
         mediaPlayer?.let {
             if (it.isPlaying) {
                 it.stop()
@@ -112,26 +141,32 @@ class LocationService : Service() {
         }
     }
 
-    private fun showEnterRadiusNotification() {
-        Log.d("LocationService", "Showing notification")
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Enter Radius Alert")
-            .setContentText("You have entered the specified radius")
-            .setSmallIcon(R.drawable.target_icon)
-            .build()
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(2, notification)
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         destinationLat = intent?.getDoubleExtra("destinationLat", 0.0) ?: 0.0
         destinationLng = intent?.getDoubleExtra("destinationLng", 0.0) ?: 0.0
         radius = intent?.getIntExtra("radius", 100) ?: 100
 
+        CoroutineScope(Dispatchers.IO).launch {
+            val activeAlarm = alarmDao.getActiveAlarm()
+            activeAlarm?.let {
+                alarmDao.updateAlarmStatus(it.id, false)
+            }
+
+            val newAlarm = Alarm(
+                destinationLat = destinationLat,
+                destinationLng = destinationLng,
+                radius = radius,
+                isActive = true
+            )
+            alarmDao.insert(newAlarm)
+        }
+
         val notification = createNotification()
         startForeground(1, notification)
+
         return START_NOT_STICKY
     }
+
 
     private fun createNotification(): Notification {
         createNotificationChannel()
@@ -161,7 +196,6 @@ class LocationService : Service() {
         super.onDestroy()
         fusedLocationClient.removeLocationUpdates(locationCallback)
         stopAlarm()
-        Log.d("LocationService", "Service destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? {

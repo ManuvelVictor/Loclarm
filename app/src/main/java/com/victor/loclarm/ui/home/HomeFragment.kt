@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -11,12 +12,10 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsetsController
 import android.widget.EditText
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,8 +34,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
 import com.victor.loclarm.databinding.FragmentHomeBinding
+import com.victor.loclarm.db.Alarm
+import com.victor.loclarm.db.AppDatabase
 import com.victor.loclarm.service.LocationService
 import com.victor.loclarm.utils.utils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class HomeFragment : Fragment(), OnMapReadyCallback {
@@ -66,12 +70,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root: View = binding.root
-
-        requireActivity().window.decorView.windowInsetsController?.let { controller ->
-            controller.hide(WindowInsetsCompat.Type.statusBars())
-            controller.systemBarsBehavior =
-                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
 
         binding.menu.setOnClickListener {
             (activity as? MainActivity)?.binding?.drawerLayout?.open()
@@ -236,19 +234,52 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun fetchPlaceDetails(placeId: String) {
-        val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG)
+        val placeFields = listOf(
+            Place.Field.ID,
+            Place.Field.NAME,
+            Place.Field.LAT_LNG,
+            Place.Field.ADDRESS_COMPONENTS
+        )
         val request = FetchPlaceRequest.newInstance(placeId, placeFields)
 
         placesClient.fetchPlace(request).addOnSuccessListener { response ->
             val place = response.place
             place.latLng?.let { latLng ->
-                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+                val zoomLevel = getZoomLevel(place)
+                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel))
             }
             utils.hideKeyboard(requireContext(), binding.searchEditText)
         }.addOnFailureListener { exception ->
             Toast.makeText(requireContext(), "Error: ${exception.message}", Toast.LENGTH_SHORT)
                 .show()
         }
+    }
+
+    private fun getZoomLevel(place: Place): Float {
+        place.addressComponents?.let { addressComponents ->
+            for (component in addressComponents.asList()) {
+                val types = component.types
+                if (types.contains("country")) {
+                    return 4f
+                }
+                if (types.contains("administrative_area_level_1")) {
+                    return 6f
+                }
+                if (types.contains("administrative_area_level_2")) {
+                    return 10f
+                }
+                if (types.contains("locality")) {
+                    return 12f
+                }
+                if (types.contains("sublocality")) {
+                    return 14f
+                }
+                if (types.contains("neighborhood")) {
+                    return 15f
+                }
+            }
+        }
+        return 15f
     }
 
     private fun setMarkerWithRadius(latLng: LatLng, radius: Int) {
@@ -271,7 +302,24 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             putExtra("radius", radius)
         }
         ContextCompat.startForegroundService(requireContext(), serviceIntent)
+
+        saveAlarm(latLng, radius)
     }
+
+    private fun saveAlarm(latLng: LatLng, radius: Int) {
+        val db = AppDatabase.getDatabase(requireContext())
+        val alarmDao = db.alarmDao()
+        CoroutineScope(Dispatchers.IO).launch {
+            val alarm = Alarm(
+                destinationLat = latLng.latitude,
+                destinationLng = latLng.longitude,
+                radius = radius,
+                isActive = true
+            )
+            alarmDao.insert(alarm)
+        }
+    }
+
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -279,16 +327,21 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         googleMap = map
         googleMap.uiSettings.isMyLocationButtonEnabled = false
         googleMap.setOnMapLongClickListener { latLng ->
-            val inputField = EditText(requireContext())
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Enter radius in meters")
-                .setView(inputField)
+            val dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_custom_radius_input, null)
+            val inputField = dialogView.findViewById<EditText>(R.id.input_radius)
+
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogView)
                 .setPositiveButton("OK") { _, _ ->
                     val radius = inputField.text.toString().toIntOrNull() ?: 0
                     setMarkerWithRadius(latLng, radius)
                 }
                 .setNegativeButton("Cancel", null)
-                .show()
+                .create()
+
+            dialog.window?.setBackgroundDrawableResource(R.drawable.rounded_corner)
+            dialog.show()
         }
         if (ContextCompat.checkSelfPermission(
                 requireContext(),

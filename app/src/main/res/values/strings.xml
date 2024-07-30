@@ -15,4 +15,6 @@
     <string name="alarm_location">Alarm location?..</string>
     <string name="menu_icon">menu_icon</string>
     <string name="current_location_button">current_location_button</string>
+    <string name="enter_radius_in_meters">Enter radius in meters</string>
+    <string name="radius_in_meters">Radius in meters</string>
 </resources>

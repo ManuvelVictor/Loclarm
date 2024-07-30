@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("kotlin-kapt")
 }
 
 android {
@@ -39,7 +40,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -51,10 +51,17 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    //Google Maps
+
+    // Google Maps
     implementation(libs.android.maps.utils)
-    //Google Places
+    // Google Places
     implementation(libs.places)
-    //Google Play Location
-    implementation (libs.play.services.location)
+    // Google Play Location
+    implementation(libs.play.services.location)
+    // ROOM Database
+    implementation(libs.androidx.room.runtime)
+
+    implementation(libs.room.ktx)
+    kapt(libs.androidx.room.compiler)
+
 }
