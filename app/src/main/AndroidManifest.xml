@@ -19,14 +19,14 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Loclarm.Fullscreen"
+        android:theme="@style/Theme.Loclarm"
         tools:targetApi="31">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Loclarm.Fullscreen"
+            android:theme="@style/Theme.Loclarm"
             tools:ignore="DiscouragedApi,LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -44,7 +44,7 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
-        <receiver android:name=".DismissAlarmReceiver" />
+        <receiver android:name=".receiver.DismissAlarmReceiver" />
 
     </application>
 

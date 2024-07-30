@@ -1,5 +1,6 @@
 package com.victor.loclarm.db
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 
 @Dao
@@ -12,4 +13,7 @@ interface AlarmDao {
 
     @Query("SELECT * FROM alarms WHERE isActive = 1 LIMIT 1")
     suspend fun getActiveAlarm(): Alarm?
+
+    @Query("SELECT * FROM alarms")
+    fun getAlarms(): LiveData<List<Alarm>>
 }

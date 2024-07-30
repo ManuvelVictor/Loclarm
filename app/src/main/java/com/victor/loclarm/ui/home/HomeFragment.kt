@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -35,7 +34,7 @@ import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
 import com.victor.loclarm.databinding.FragmentHomeBinding
 import com.victor.loclarm.db.Alarm
-import com.victor.loclarm.db.AppDatabase
+import com.victor.loclarm.db.AlarmDatabase
 import com.victor.loclarm.service.LocationService
 import com.victor.loclarm.utils.utils
 import kotlinx.coroutines.CoroutineScope
@@ -307,7 +306,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun saveAlarm(latLng: LatLng, radius: Int) {
-        val db = AppDatabase.getDatabase(requireContext())
+        val db = AlarmDatabase.getDatabase(requireContext())
         val alarmDao = db.alarmDao()
         CoroutineScope(Dispatchers.IO).launch {
             val alarm = Alarm(

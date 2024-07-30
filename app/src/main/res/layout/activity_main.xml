@@ -27,6 +27,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:backgroundTint="#0C070D"
+        android:paddingTop="60dp"
         app:headerLayout="@layout/nav_header_main"
         app:menu="@menu/activity_main_drawer" />
 

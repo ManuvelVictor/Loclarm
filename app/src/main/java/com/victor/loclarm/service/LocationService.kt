@@ -1,7 +1,6 @@
 package com.victor.loclarm.service
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,18 +11,16 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.media.MediaPlayer
-import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
-import com.victor.loclarm.DismissAlarmReceiver
+import com.victor.loclarm.receiver.DismissAlarmReceiver
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
 import com.victor.loclarm.db.Alarm
 import com.victor.loclarm.db.AlarmDao
-import com.victor.loclarm.db.AppDatabase
+import com.victor.loclarm.db.AlarmDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,7 +43,7 @@ class LocationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        val db = AppDatabase.getDatabase(this)
+        val db = AlarmDatabase.getDatabase(this)
         alarmDao = db.alarmDao()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         locationCallback = object : LocationCallback() {
@@ -69,7 +66,6 @@ class LocationService : Service() {
     }
 
     private fun showEnterRadiusNotification() {
-        Log.d("LocationService", "Showing notification")
         val dismissIntent = Intent(this, DismissAlarmReceiver::class.java).apply {
             action = "DISMISS_ALARM"
         }
