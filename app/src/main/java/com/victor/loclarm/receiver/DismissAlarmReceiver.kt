@@ -1,5 +1,6 @@
 package com.victor.loclarm.receiver
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -19,7 +20,8 @@ class DismissAlarmReceiver : BroadcastReceiver() {
                 alarmDao.updateAlarmStatus(it.id, false)
             }
         }
-        val serviceIntent = Intent(context, LocationService::class.java)
-        context.stopService(serviceIntent)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancelAll()
+        context.stopService(Intent(context, LocationService::class.java))
     }
 }

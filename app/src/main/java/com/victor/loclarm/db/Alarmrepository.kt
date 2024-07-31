@@ -8,4 +8,12 @@ class AlarmRepository(private val alarmDao: AlarmDao) {
     suspend fun insert(alarm: Alarm) {
         alarmDao.insert(alarm)
     }
+
+    suspend fun getActiveAlarm(): Alarm? {
+        return alarmDao.getActiveAlarm()
+    }
+
+    suspend fun updateAlarmStatus(id: Int, isActive: Boolean) {
+        alarmDao.updateAlarmStatus(id, isActive)
+    }
 }

@@ -26,8 +26,10 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:backgroundTint="#0C070D"
+        android:backgroundTint="@color/white"
         android:paddingTop="60dp"
+        app:itemTextColor="@color/black"
+        app:itemIconTint="@color/black"
         app:headerLayout="@layout/nav_header_main"
         app:menu="@menu/activity_main_drawer" />
 

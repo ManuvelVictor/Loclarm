@@ -29,6 +29,7 @@ class LocationService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private var alarmName: String = ""
     private var enteredRadius = false
     private var destinationLat: Double = 0.0
     private var destinationLng: Double = 0.0
@@ -76,6 +77,7 @@ class LocationService : Service() {
             .setContentText("You have entered the specified radius")
             .setSmallIcon(R.drawable.target_icon)
             .addAction(R.drawable.close_icon, "Dismiss", dismissPendingIntent)
+            .setOngoing(true)
             .build()
 
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -135,12 +137,23 @@ class LocationService : Service() {
                 mediaPlayer = null
             }
         }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val activeAlarm = alarmDao.getActiveAlarm()
+            activeAlarm?.let {
+                alarmDao.updateAlarmStatus(it.id, false)
+            }
+        }
+
+        stopForeground(true)
+        stopSelf()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         destinationLat = intent?.getDoubleExtra("destinationLat", 0.0) ?: 0.0
         destinationLng = intent?.getDoubleExtra("destinationLng", 0.0) ?: 0.0
         radius = intent?.getIntExtra("radius", 100) ?: 100
+        alarmName = intent?.getStringExtra("alarmName").toString()
 
         CoroutineScope(Dispatchers.IO).launch {
             val activeAlarm = alarmDao.getActiveAlarm()
@@ -149,6 +162,7 @@ class LocationService : Service() {
             }
 
             val newAlarm = Alarm(
+                alarmName = alarmName,
                 destinationLat = destinationLat,
                 destinationLng = destinationLng,
                 radius = radius,
@@ -175,6 +189,7 @@ class LocationService : Service() {
             .setContentText("Tracking your location")
             .setContentIntent(pendingIntent)
             .setSmallIcon(R.drawable.map_pin)
+            .setOngoing(true)
             .build()
     }
 

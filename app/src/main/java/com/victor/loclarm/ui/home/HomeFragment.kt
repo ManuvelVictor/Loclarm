@@ -13,9 +13,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -33,14 +36,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
 import com.victor.loclarm.databinding.FragmentHomeBinding
-import com.victor.loclarm.db.Alarm
 import com.victor.loclarm.db.AlarmDatabase
+import com.victor.loclarm.db.AlarmRepository
 import com.victor.loclarm.service.LocationService
 import com.victor.loclarm.utils.utils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-
 
 class HomeFragment : Fragment(), OnMapReadyCallback {
 
@@ -53,6 +52,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     private lateinit var searchResultsAdapter: SearchResultsAdapter
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 200
     }
@@ -60,6 +61,25 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     private val permissionNew = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
     )
+
+    private val viewModel: HomeViewModel by viewModels {
+        HomeViewModelFactory(
+            AlarmRepository(AlarmDatabase.getDatabase(requireContext()).alarmDao()),
+            this
+        )
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                googleMap.isMyLocationEnabled = true
+                getCurrentLocation()
+            }
+        }
+    }
 
     @SuppressLint("NewApi")
     override fun onCreateView(
@@ -94,25 +114,17 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     private fun getCurrentLocation() {
-        if (checkPermissions()) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
                     val latLng = LatLng(location.latitude, location.longitude)
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Unable to get current location",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(), "Unable to get current location", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
-            Toast.makeText(
-                requireContext(),
-                "Required permissions are not granted",
-                Toast.LENGTH_SHORT
-            ).show()
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
@@ -150,8 +162,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 googleMap.isMyLocationEnabled = true
                 getCurrentLocation()
-            } else {
-                Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -232,6 +242,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun fetchPlaceDetails(placeId: String) {
         val placeFields = listOf(
             Place.Field.ID,
@@ -248,6 +259,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel))
             }
             utils.hideKeyboard(requireContext(), binding.searchEditText)
+            searchEditText.setText("")
         }.addOnFailureListener { exception ->
             Toast.makeText(requireContext(), "Error: ${exception.message}", Toast.LENGTH_SHORT)
                 .show()
@@ -281,7 +293,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         return 15f
     }
 
-    private fun setMarkerWithRadius(latLng: LatLng, radius: Int) {
+    private fun setMarkerWithRadius(latLng: LatLng, alarmName: String, radius: Int) {
         googleMap.clear()
         googleMap.addMarker(
             com.google.android.gms.maps.model.MarkerOptions().position(latLng).title("Destination")
@@ -290,8 +302,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             com.google.android.gms.maps.model.CircleOptions()
                 .center(latLng)
                 .radius(radius.toDouble())
-                .strokeColor(R.color.teal_200)
-                .fillColor(0x220000FF)
+                .strokeColor(R.color.black)
+                .fillColor(0x22FFD300)
                 .strokeWidth(5f)
         )
 
@@ -299,42 +311,28 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             putExtra("destinationLat", latLng.latitude)
             putExtra("destinationLng", latLng.longitude)
             putExtra("radius", radius)
+            putExtra("alarmName", alarmName)
         }
         ContextCompat.startForegroundService(requireContext(), serviceIntent)
 
-        saveAlarm(latLng, radius)
+        viewModel.saveAlarm(latLng, alarmName, radius)
     }
 
-    private fun saveAlarm(latLng: LatLng, radius: Int) {
-        val db = AlarmDatabase.getDatabase(requireContext())
-        val alarmDao = db.alarmDao()
-        CoroutineScope(Dispatchers.IO).launch {
-            val alarm = Alarm(
-                destinationLat = latLng.latitude,
-                destinationLng = latLng.longitude,
-                radius = radius,
-                isActive = true
-            )
-            alarmDao.insert(alarm)
-        }
-    }
-
-
-
-    @SuppressLint("ClickableViewAccessibility")
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
         googleMap.uiSettings.isMyLocationButtonEnabled = false
         googleMap.setOnMapLongClickListener { latLng ->
             val dialogView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_custom_radius_input, null)
-            val inputField = dialogView.findViewById<EditText>(R.id.input_radius)
+            val radiusInputField = dialogView.findViewById<EditText>(R.id.input_radius)
+            val nameInputField = dialogView.findViewById<EditText>(R.id.input_alarm_name)
 
             val dialog = MaterialAlertDialogBuilder(requireContext())
                 .setView(dialogView)
                 .setPositiveButton("OK") { _, _ ->
-                    val radius = inputField.text.toString().toIntOrNull() ?: 0
-                    setMarkerWithRadius(latLng, radius)
+                    val radius = radiusInputField.text.toString().toIntOrNull() ?: 0
+                    val alarmName = nameInputField.text.toString()
+                    setMarkerWithRadius(latLng, alarmName, radius)
                 }
                 .setNegativeButton("Cancel", null)
                 .create()
@@ -342,19 +340,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             dialog.window?.setBackgroundDrawableResource(R.drawable.rounded_corner)
             dialog.show()
         }
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-            == PackageManager.PERMISSION_GRANTED
-        ) {
+
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             googleMap.isMyLocationEnabled = true
             getCurrentLocation()
         } else {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
