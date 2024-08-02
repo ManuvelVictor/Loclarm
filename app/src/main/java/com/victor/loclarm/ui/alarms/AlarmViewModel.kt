@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
-import com.victor.loclarm.db.Alarm
+import com.victor.loclarm.db.model.Alarm
 import com.victor.loclarm.db.AlarmDatabase
 import com.victor.loclarm.db.AlarmRepository
 import kotlinx.coroutines.launch
@@ -22,5 +22,12 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     fun insert(alarm: Alarm) = viewModelScope.launch {
         repository.insert(alarm)
     }
-}
 
+    fun update(alarm: Alarm) = viewModelScope.launch {
+        repository.update(alarm)
+    }
+
+    fun delete(alarm: Alarm) = viewModelScope.launch {
+        repository.delete(alarm)
+    }
+}

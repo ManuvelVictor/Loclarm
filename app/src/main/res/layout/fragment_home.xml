@@ -45,6 +45,7 @@
         android:drawableTint="@color/black"
         android:hint="@string/alarm_location"
         android:letterSpacing="0.05"
+        android:maxLines="1"
         android:padding="15dp"
         android:textColor="@color/black"
         android:textColorHint="@color/black"
@@ -62,12 +63,12 @@
         android:layout_marginEnd="8dp"
         android:background="@drawable/rounded_corner"
         android:contentDescription="@string/current_location_button"
-        android:padding="12dp"
-        android:src="@drawable/current_location"
+        android:padding="10dp"
+        android:src="@drawable/alarm_name_icon"
         app:layout_constraintBottom_toBottomOf="@+id/search_edit_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/black" />
+        app:tint="?attr/colorPrimary" />
 
 
     <androidx.recyclerview.widget.RecyclerView

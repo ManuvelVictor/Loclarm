@@ -1,6 +1,7 @@
 package com.victor.loclarm.service
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,20 +11,33 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.media.AudioManager
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import com.google.android.gms.location.*
-import com.victor.loclarm.receiver.DismissAlarmReceiver
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
-import com.victor.loclarm.db.Alarm
 import com.victor.loclarm.db.AlarmDao
 import com.victor.loclarm.db.AlarmDatabase
+import com.victor.loclarm.db.UserSettingsDao
+import com.victor.loclarm.db.model.Alarm
+import com.victor.loclarm.db.model.UserSettings
+import com.victor.loclarm.receiver.DismissAlarmReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LocationService : Service() {
 
@@ -35,18 +49,32 @@ class LocationService : Service() {
     private var destinationLng: Double = 0.0
     private var radius: Int = 100
     private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
+    private lateinit var userSettings: UserSettings
+    private lateinit var audioManager: AudioManager
 
     companion object {
         const val CHANNEL_ID = "LocationServiceChannel"
     }
 
     private lateinit var alarmDao: AlarmDao
+    private lateinit var userSettingsDao: UserSettingsDao
 
+    @RequiresApi(Build.VERSION_CODES.S)
+    @SuppressLint("ServiceCast")
     override fun onCreate() {
         super.onCreate()
         val db = AlarmDatabase.getDatabase(this)
         alarmDao = db.alarmDao()
+        userSettingsDao = db.userSettingsDao()
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        CoroutineScope(Dispatchers.IO).launch {
+            userSettings = fetchUserSettings()
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        vibrator = getSystemService(Vibrator::class.java)
+
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
@@ -57,13 +85,34 @@ class LocationService : Service() {
         startLocationUpdates()
     }
 
+    private suspend fun fetchUserSettings(): UserSettings {
+        return withContext(Dispatchers.IO) {
+            userSettingsDao.getUserSettings() ?: UserSettings()
+        }
+    }
+
     private fun triggerAlarm() {
         if (mediaPlayer == null) {
             mediaPlayer = MediaPlayer.create(this, R.raw.retro_game)
             mediaPlayer?.isLooping = true
             mediaPlayer?.start()
+            val volumeSetting = userSettings.volume
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val volumeIndex = ((volumeSetting / 10.0) * maxVolume).toInt()
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeIndex, 0)
+            if (userSettings.vibration) {
+                startVibration()
+            }
             showEnterRadiusNotification()
         }
+    }
+
+    private fun startVibration() {
+        vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 1000, 1000), 0))
+    }
+
+    private fun stopVibration() {
+        vibrator?.cancel()
     }
 
     private fun showEnterRadiusNotification() {
@@ -83,7 +132,6 @@ class LocationService : Service() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(2, notification)
     }
-
 
     private fun startLocationUpdates() {
         val locationRequest = LocationRequest.Builder(
@@ -127,7 +175,6 @@ class LocationService : Service() {
         }
     }
 
-
     private fun stopAlarm() {
         mediaPlayer?.let {
             if (it.isPlaying) {
@@ -137,6 +184,7 @@ class LocationService : Service() {
                 mediaPlayer = null
             }
         }
+        stopVibration()
 
         CoroutineScope(Dispatchers.IO).launch {
             val activeAlarm = alarmDao.getActiveAlarm()
@@ -145,7 +193,7 @@ class LocationService : Service() {
             }
         }
 
-        stopForeground(true)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
@@ -177,10 +225,11 @@ class LocationService : Service() {
         return START_NOT_STICKY
     }
 
-
     private fun createNotification(): Notification {
         createNotificationChannel()
-        val notificationIntent = Intent(this, MainActivity::class.java)
+        val notificationIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
         val pendingIntent =
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 

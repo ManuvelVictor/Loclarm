@@ -1,4 +1,4 @@
-package com.victor.loclarm.db
+package com.victor.loclarm.db.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -10,6 +10,5 @@ data class Alarm(
     val destinationLat: Double,
     val destinationLng: Double,
     val radius: Int,
-    val isActive: Boolean = false
+    var isActive: Boolean = false
 )
-

@@ -6,17 +6,17 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.databinding.FragmentAlarmBinding
+import com.victor.loclarm.db.model.Alarm
 
 class AlarmFragment : Fragment() {
 
     private var _binding: FragmentAlarmBinding? = null
     private val binding get() = _binding!!
     private val alarmViewModel: AlarmViewModel by viewModels()
-    private val alarmAdapter by lazy { AlarmAdapter() }
+    private val alarmAdapter by lazy { AlarmAdapter(::updateAlarm, ::deleteAlarm) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -53,6 +53,14 @@ class AlarmFragment : Fragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = alarmAdapter
         }
+    }
+
+    private fun updateAlarm(alarm: Alarm) {
+        alarmViewModel.update(alarm)
+    }
+
+    private fun deleteAlarm(alarm: Alarm) {
+        alarmViewModel.delete(alarm)
     }
 
     override fun onDestroyView() {

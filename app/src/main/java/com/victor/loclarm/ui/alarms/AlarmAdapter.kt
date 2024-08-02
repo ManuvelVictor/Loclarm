@@ -4,17 +4,29 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.victor.loclarm.databinding.AlarmItemBinding
-import com.victor.loclarm.db.Alarm
+import com.victor.loclarm.db.model.Alarm
 
-class AlarmAdapter : RecyclerView.Adapter<AlarmAdapter.AlarmViewHolder>() {
+class AlarmAdapter(private val onAlarmUpdate: (Alarm) -> Unit, private val onAlarmDelete: (Alarm) -> Unit) : RecyclerView.Adapter<AlarmAdapter.AlarmViewHolder>() {
 
     private var alarms = emptyList<Alarm>()
 
     inner class AlarmViewHolder(private val binding: AlarmItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(alarm: Alarm) {
+            binding.alarmName.text = alarm.alarmName
             binding.alarmTime.text = alarm.id.toString()
             binding.alarmStatus.isChecked = alarm.isActive
+            "${alarm.radius}m".also { binding.alarmDistance.text = it }
+
+            binding.alarmStatus.setOnClickListener {
+                alarm.isActive = !alarm.isActive
+                onAlarmUpdate(alarm)
+            }
+
+            binding.deleteButton.setOnClickListener {
+                onAlarmDelete(alarm)
+            }
+
         }
     }
 
