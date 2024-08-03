@@ -1,22 +1,25 @@
-Here's a GitHub README for your location-based alarm project:
-
----
-
 # Location-Based Alarm
 
 A location-based alarm Android application built using Kotlin and MVVM architecture. This app allows users to set alarms based on specific locations and notifies them when they reach the specified area.
 
 ## Screenshots
 
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/aa13a72a4f8da7c08b69f8e1f06eec9410792553/loclarm_home.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_search.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_set_location.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_notification.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_notification.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_navigation_menu.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_without_alarms.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_with_alarms.PNG" width="300" height="600"/>
-<img src="https://github.com/ManuvelVictor/Loclarm/blob/aa13a72a4f8da7c08b69f8e1f06eec9410792553/loclarm_settings.PNG" width="300" height="600"/>
+<p align="center">
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/aa13a72a4f8da7c08b69f8e1f06eec9410792553/loclarm_home.PNG" width="300" height="600"/>
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_search.PNG" width="300" height="600"/>
+</p>
+<p align="center">
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_set_location.PNG" width="300" height="600"/>
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_notification.PNG" width="300" height="600"/>
+</p>
+<p align="center">
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_navigation_menu.PNG" width="300" height="600"/>
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_without_alarms.PNG" width="300" height="600"/>
+</p>
+<p align="center">
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_with_alarms.PNG" width="300" height="600"/>
+  <img src="https://github.com/ManuvelVictor/Loclarm/blob/aa13a72a4f8da7c08b69f8e1f06eec9410792553/loclarm_settings.PNG" width="300" height="600"/>
+</p>
 
 ## Features
 
@@ -110,3 +113,5 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 ## License
 
 This project is licensed under the Apache License.
+
+---
