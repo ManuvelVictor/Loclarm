@@ -14,7 +14,33 @@
         android:paddingBottom="8dp"
         android:text="@string/enter_radius_in_meters"
         android:textAppearance="?attr/textAppearanceHeadline6"
-        android:textColor="@color/white" />
+        android:textColor="@color/black" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:boxCornerRadiusTopStart="16dp"
+        app:boxCornerRadiusTopEnd="16dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:boxCornerRadiusBottomStart="16dp"
+        app:startIconDrawable="@drawable/alarm_name_icon"
+        app:startIconTint="@color/quantum_grey700"
+        android:hapticFeedbackEnabled="true"
+        app:boxCornerRadiusBottomEnd="16dp"
+        app:hintTextColor="@color/black"
+        app:boxStrokeColor="@color/black"
+        android:hint="@string/enter_alarm_name"
+        android:textColorHint="@color/quantum_grey700">
+
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/input_alarm_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textCapWords"
+        android:textColor="@android:color/black"
+        android:textColorHint="@color/quantum_grey700" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
@@ -28,7 +54,8 @@
         app:startIconTint="@color/quantum_grey700"
         android:hapticFeedbackEnabled="true"
         app:boxCornerRadiusBottomEnd="16dp"
-        app:boxStrokeColor="#FFD300"
+        app:hintTextColor="@color/black"
+        app:boxStrokeColor="@color/black"
         android:hint="@string/radius_in_meters"
         android:textColorHint="@color/quantum_grey700">
 
@@ -37,7 +64,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="number"
-            android:textColor="@android:color/white"
+            android:textColor="@android:color/black"
             android:textColorHint="@color/quantum_grey700" />
     </com.google.android.material.textfield.TextInputLayout>
 </LinearLayout>

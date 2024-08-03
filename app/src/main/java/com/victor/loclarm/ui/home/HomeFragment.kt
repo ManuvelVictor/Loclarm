@@ -4,8 +4,9 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -13,10 +14,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.RelativeLayout
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -25,23 +29,22 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.victor.loclarm.MainActivity
 import com.victor.loclarm.R
 import com.victor.loclarm.databinding.FragmentHomeBinding
-import com.victor.loclarm.db.Alarm
-import com.victor.loclarm.db.AppDatabase
+import com.victor.loclarm.db.model.Alarm
+import com.victor.loclarm.db.AlarmDatabase
+import com.victor.loclarm.db.AlarmRepository
 import com.victor.loclarm.service.LocationService
 import com.victor.loclarm.utils.utils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-
 
 class HomeFragment : Fragment(), OnMapReadyCallback {
 
@@ -53,16 +56,28 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     private lateinit var searchResultsRecyclerView: RecyclerView
     private lateinit var searchResultsAdapter: SearchResultsAdapter
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
-    companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 200
+    private val viewModel: HomeViewModel by viewModels {
+        HomeViewModelFactory(
+            AlarmRepository(AlarmDatabase.getDatabase(requireContext()).alarmDao()),
+            this
+        )
     }
 
-    private val permissionNew = arrayOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-    )
+    @SuppressLint("MissingPermission")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    @SuppressLint("NewApi")
+        requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+                if (isGranted) {
+                    googleMap.isMyLocationEnabled = true
+                    getCurrentLocation()
+                }
+            }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -72,6 +87,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         val root: View = binding.root
 
         binding.menu.setOnClickListener {
+            utils.hideKeyboard(requireContext(), requireView())
             (activity as? MainActivity)?.binding?.drawerLayout?.open()
         }
 
@@ -93,69 +109,29 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         return root
     }
 
-    @SuppressLint("MissingPermission")
     private fun getCurrentLocation() {
-        if (checkPermissions()) {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
                     val latLng = LatLng(location.latitude, location.longitude)
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
                 } else {
-                    Toast.makeText(
-                        requireContext(),
+                    Snackbar.make(
+                        requireView(),
                         "Unable to get current location",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             }
         } else {
-            Toast.makeText(
-                requireContext(),
-                "Required permissions are not granted",
-                Toast.LENGTH_SHORT
-            ).show()
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    private fun checkPermissions(): Boolean {
-        val listPermissionsNeeded: MutableList<String> = ArrayList()
-        for (permission in permissionNew) {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    permission
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                listPermissionsNeeded.add(permission)
-            }
-        }
-        return if (listPermissionsNeeded.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                listPermissionsNeeded.toTypedArray(),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-            false
-        } else {
-            true
-        }
-    }
-
-    @Deprecated("Deprecated in Java")
-    @SuppressLint("MissingPermission")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                googleMap.isMyLocationEnabled = true
-                getCurrentLocation()
-            } else {
-                Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     @SuppressLint("ClickableViewAccessibility", "SetTextI18n")
     private fun setupSearchView() {
@@ -176,7 +152,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (s.isNullOrEmpty()) {
-                    binding.searchResultsRecyclerView.visibility = View.GONE
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        binding.searchResultsRecyclerView.visibility = View.GONE
+                    }, 500)
                 }
             }
 
@@ -187,12 +165,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
                     binding.searchEditText.setCompoundDrawablesWithIntrinsicBounds(
                         R.drawable.search_icon, 0, R.drawable.close_icon, 0
                     )
-                    binding.searchResultsRecyclerView.visibility = View.VISIBLE
                 } else {
                     binding.searchEditText.setCompoundDrawablesWithIntrinsicBounds(
                         R.drawable.search_icon, 0, 0, 0
                     )
-                    binding.searchResultsRecyclerView.visibility = View.GONE
                 }
             }
         })
@@ -225,14 +201,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             .build()
 
         placesClient.findAutocompletePredictions(request).addOnSuccessListener { response ->
-            searchResultsAdapter.submitList(response.autocompletePredictions)
-            binding.searchResultsRecyclerView.visibility = View.VISIBLE
+            if (response.autocompletePredictions.isEmpty()) {
+                binding.searchResultsRecyclerView.visibility = View.GONE
+            } else {
+                searchResultsAdapter.submitList(response.autocompletePredictions)
+                binding.searchResultsRecyclerView.visibility = View.VISIBLE
+            }
         }.addOnFailureListener { exception ->
             Toast.makeText(requireContext(), "Error: ${exception.message}", Toast.LENGTH_SHORT)
                 .show()
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun fetchPlaceDetails(placeId: String) {
         val placeFields = listOf(
             Place.Field.ID,
@@ -249,6 +230,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel))
             }
             utils.hideKeyboard(requireContext(), binding.searchEditText)
+            searchEditText.setText("")
         }.addOnFailureListener { exception ->
             Toast.makeText(requireContext(), "Error: ${exception.message}", Toast.LENGTH_SHORT)
                 .show()
@@ -282,7 +264,68 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         return 15f
     }
 
-    private fun setMarkerWithRadius(latLng: LatLng, radius: Int) {
+    override fun onMapReady(map: GoogleMap) {
+        googleMap = map
+        googleMap.uiSettings.isMyLocationButtonEnabled = false
+        googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.custom_map))
+        googleMap.setOnMapLoadedCallback {
+            try {
+                val mapView = binding.googleMapsView
+
+                val compassButton = mapView.findViewWithTag<View>("GoogleMapCompass")
+
+                compassButton?.let {
+                    val rlp = it.layoutParams as RelativeLayout.LayoutParams
+                    rlp.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0)
+                    rlp.addRule(RelativeLayout.ALIGN_PARENT_START, 0)
+                    rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+                    rlp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
+                    rlp.setMargins(0, 0, 50, 50)
+                    it.layoutParams = rlp
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        googleMap.setOnMapLongClickListener { latLng ->
+            val dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_custom_radius_input, null)
+            val radiusInputField = dialogView.findViewById<EditText>(R.id.input_radius)
+            val nameInputField = dialogView.findViewById<EditText>(R.id.input_alarm_name)
+
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogView)
+                .setPositiveButton("OK") { dialog, _ ->
+                    val radius = radiusInputField.text.toString().toIntOrNull() ?: 0
+                    val alarmName = nameInputField.text.toString()
+                    setMarkerWithRadius(latLng, alarmName, radius)
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Cancel", null)
+                .create()
+
+            dialog.window?.setBackgroundDrawableResource(R.drawable.rounded_corner)
+            dialog.show()
+        }
+
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            googleMap.isMyLocationEnabled = true
+            getCurrentLocation()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        viewModel.getActiveAlarms().observe(viewLifecycleOwner) { alarms ->
+            updateMapWithActiveAlarms(alarms)
+        }
+    }
+
+    private fun setMarkerWithRadius(latLng: LatLng, alarmName: String, radius: Int) {
         googleMap.clear()
         googleMap.addMarker(
             com.google.android.gms.maps.model.MarkerOptions().position(latLng).title("Destination")
@@ -291,8 +334,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             com.google.android.gms.maps.model.CircleOptions()
                 .center(latLng)
                 .radius(radius.toDouble())
-                .strokeColor(R.color.teal_200)
-                .fillColor(0x220000FF)
+                .strokeColor(R.color.black)
+                .fillColor(0x22FFD300)
                 .strokeWidth(5f)
         )
 
@@ -300,64 +343,35 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             putExtra("destinationLat", latLng.latitude)
             putExtra("destinationLng", latLng.longitude)
             putExtra("radius", radius)
+            putExtra("alarmName", alarmName)
         }
         ContextCompat.startForegroundService(requireContext(), serviceIntent)
 
-        saveAlarm(latLng, radius)
-    }
-
-    private fun saveAlarm(latLng: LatLng, radius: Int) {
-        val db = AppDatabase.getDatabase(requireContext())
-        val alarmDao = db.alarmDao()
-        CoroutineScope(Dispatchers.IO).launch {
-            val alarm = Alarm(
-                destinationLat = latLng.latitude,
-                destinationLng = latLng.longitude,
-                radius = radius,
-                isActive = true
-            )
-            alarmDao.insert(alarm)
+        viewModel.saveAlarm(latLng, alarmName, radius) {
+            Snackbar.make(binding.root, "Alarm name already exists", Snackbar.LENGTH_LONG).show()
         }
     }
 
-
-
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onMapReady(map: GoogleMap) {
-        googleMap = map
-        googleMap.uiSettings.isMyLocationButtonEnabled = false
-        googleMap.setOnMapLongClickListener { latLng ->
-            val dialogView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.dialog_custom_radius_input, null)
-            val inputField = dialogView.findViewById<EditText>(R.id.input_radius)
-
-            val dialog = MaterialAlertDialogBuilder(requireContext())
-                .setView(dialogView)
-                .setPositiveButton("OK") { _, _ ->
-                    val radius = inputField.text.toString().toIntOrNull() ?: 0
-                    setMarkerWithRadius(latLng, radius)
-                }
-                .setNegativeButton("Cancel", null)
-                .create()
-
-            dialog.window?.setBackgroundDrawableResource(R.drawable.rounded_corner)
-            dialog.show()
-        }
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
+    private fun updateMapWithActiveAlarms(alarms: List<Alarm>) {
+        googleMap.clear()
+        for (alarm in alarms) {
+            val latLng = LatLng(alarm.destinationLat, alarm.destinationLng)
+            googleMap.addMarker(
+                com.google.android.gms.maps.model.MarkerOptions()
+                    .position(latLng)
+                    .title(alarm.alarmName)
             )
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            googleMap.isMyLocationEnabled = true
-            getCurrentLocation()
-        } else {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
+            googleMap.addCircle(
+                com.google.android.gms.maps.model.CircleOptions()
+                    .center(latLng)
+                    .radius(alarm.radius.toDouble())
+                    .strokeColor(R.color.black)
+                    .fillColor(0x22FFD300)
+                    .strokeWidth(5f)
             )
         }
     }
+
 
     override fun onResume() {
         super.onResume()
