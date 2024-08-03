@@ -55,7 +55,6 @@ The app requires the following permissions:
 1. Clone the repository:
    ```bash
    git clone https://github.com/ManuvelVictor/Loclarm.git
-   cd location-based-alarm
    ```
 
 2. Add your Google Maps API key to the project.
