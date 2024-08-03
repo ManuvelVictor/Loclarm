@@ -9,13 +9,14 @@ A location-based alarm Android application built using Kotlin and MVVM architect
 ## Screenshots
 
 <img src="https://github.com/ManuvelVictor/Loclarm/blob/aa13a72a4f8da7c08b69f8e1f06eec9410792553/loclarm_home.PNG" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230937208-2c88367b-4029-4b97-b1b5-3fb3649c888f.png" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230933236-55dfe3c6-d285-45cd-885c-8597d4f44cd3.png" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230937208-2c88367b-4029-4b97-b1b5-3fb3649c888f.png" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230933236-55dfe3c6-d285-45cd-885c-8597d4f44cd3.png" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230937208-2c88367b-4029-4b97-b1b5-3fb3649c888f.png" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230933236-55dfe3c6-d285-45cd-885c-8597d4f44cd3.png" width="300" height="600"/>
-<img src="https://user-images.githubusercontent.com/81816979/230937208-2c88367b-4029-4b97-b1b5-3fb3649c888f.png" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_search.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_set_location.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_notification.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_notification.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_navigation_menu.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_without_alarms.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/03a88f83ccf5b1aa6c3383a349e330aa5fa6755b/loclarm_with_alarms.PNG" width="300" height="600"/>
+<img src="https://github.com/ManuvelVictor/Loclarm/blob/aa13a72a4f8da7c08b69f8e1f06eec9410792553/loclarm_settings.PNG" width="300" height="600"/>
 
 ## Features
 
